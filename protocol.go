@@ -1,17 +1,19 @@
 package influxdb
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 // Protocol implements a protocol encoder.
 type Protocol interface {
 	// Encode encodes the Point into the io.Writer.
-	Encode(w io.Writer, pt *Point, opt EncodeOptions) error
+	Encode(w io.Writer, pt *Point) (n int, err error)
 
 	// ContentType returns the Content Type of this protocol format.
 	ContentType() string
@@ -33,27 +35,29 @@ var (
 	DefaultWriteType = DefaultWriteProtocol.ContentType()
 )
 
-// EncodeOptions keeps the extra options that maybe used when encoding points.
-// There is no guarantee that all options here are used by a protocol.
-type EncodeOptions struct {
+// Encode encodes a point using the DefaultWriteProtocol.
+func Encode(w io.Writer, pt *Point) (n int, err error) {
+	return DefaultWriteProtocol.Encode(w, pt)
+}
+
+var _bufpool = &sync.Pool{
+	New: func() interface{} {
+		return bytes.NewBuffer(make([]byte, 0, 64))
+	},
+}
+
+type lineProtocolV1 struct {
 	Precision Precision
 }
 
-// Encode encodes a point using the DefaultWriteProtocol.
-func Encode(w io.Writer, pt *Point) error {
-	return DefaultWriteProtocol.Encode(w, pt, EncodeOptions{})
-}
-
-type lineProtocolV1 struct{}
-
-func (*lineProtocolV1) Encode(w io.Writer, pt *Point, opt EncodeOptions) error {
+func (p *lineProtocolV1) Encode(w io.Writer, pt *Point) (n int, err error) {
 	if len(pt.Fields) == 0 {
-		return ErrNoFields
+		return 0, ErrNoFields
 	}
 
 	precisionFactor := int64(1)
-	if opt.Precision != "" {
-		switch opt.Precision {
+	if p != nil {
+		switch p.Precision {
 		case PrecisionHour:
 			precisionFactor = int64(time.Hour)
 		case PrecisionMinute:
@@ -69,39 +73,44 @@ func (*lineProtocolV1) Encode(w io.Writer, pt *Point, opt EncodeOptions) error {
 		}
 	}
 
-	io.WriteString(w, escapeMeasurement(pt.Name))
+	buf := _bufpool.Get().(*bytes.Buffer)
+	buf.WriteString(escapeMeasurement(pt.Name))
 	if len(pt.Tags) > 0 {
 		for _, t := range pt.Tags {
-			io.WriteString(w, ",")
-			io.WriteString(w, escapeTag(t.Key))
-			io.WriteString(w, "=")
-			io.WriteString(w, escapeTag(t.Value))
+			buf.WriteString(",")
+			buf.WriteString(escapeTag(t.Key))
+			buf.WriteString("=")
+			buf.WriteString(escapeTag(t.Value))
 		}
 	}
-	io.WriteString(w, " ")
+	buf.WriteString(" ")
 
 	i := 0
 	for k, v := range pt.Fields {
 		if i > 0 {
-			io.WriteString(w, ",")
+			buf.WriteString(",")
 		}
-		io.WriteString(w, escapeString(k))
-		io.WriteString(w, "=")
+		buf.WriteString(escapeString(k))
+		buf.WriteString("=")
 
 		value, err := formatValue(v)
 		if err != nil {
-			return err
+			return 0, err
 		}
-		io.WriteString(w, value)
+		buf.WriteString(value)
 		i++
 	}
 	if !pt.Time.IsZero() {
-		io.WriteString(w, " ")
+		buf.WriteString(" ")
 		ts := pt.Time.UnixNano() / precisionFactor
-		io.WriteString(w, strconv.FormatInt(ts, 10))
+		buf.WriteString(strconv.FormatInt(ts, 10))
 	}
-	io.WriteString(w, "\n")
-	return nil
+	buf.WriteString("\n")
+
+	n, err = w.Write(buf.Bytes())
+	buf.Reset()
+	_bufpool.Put(buf)
+	return
 }
 
 func (*lineProtocolV1) ContentType() string {
@@ -171,9 +180,9 @@ func formatValue(v interface{}) (string, error) {
 		return `"` + escapeString(v) + `"`, nil
 	case bool:
 		if v {
-			return "true", nil
+			return "t", nil
 		}
-		return "false", nil
+		return "f", nil
 	default:
 		return "", fmt.Errorf("invalid field type: %T", v)
 	}

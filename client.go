@@ -240,8 +240,14 @@ func (c *Client) Execute(q interface{}, opts ...QueryOption) error {
 	return querier.Execute(q, opts...)
 }
 
-func (c *Client) Writer() *Writer {
-	return &Writer{c: c}
+// Writer creates a Writer that will use this Client to write to the database.
+func (c *Client) Writer() *HTTPWriter {
+	return &HTTPWriter{
+		c: c,
+		WriteOptions: WriteOptions{
+			Protocol: DefaultWriteProtocol,
+		},
+	}
 }
 
 // url constructs a URL object for this client.

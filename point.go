@@ -2,6 +2,7 @@ package influxdb
 
 import (
 	"bytes"
+	"io"
 	"time"
 )
 
@@ -38,4 +39,15 @@ type Point struct {
 	Tags   Tags
 	Fields map[string]interface{}
 	Time   time.Time
+}
+
+// WriteTo writes this Point to the io.Writer using the default write protocol.
+// If the target io.Writer is an Writer, this uses the Protocol associated with
+// that Writer.
+func (pt *Point) WriteTo(w io.Writer) (n int, err error) {
+	p := DefaultWriteProtocol
+	if w, ok := w.(Writer); ok {
+		p = w.Protocol()
+	}
+	return p.Encode(w, pt)
 }

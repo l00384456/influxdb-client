@@ -9,7 +9,7 @@ func Ping() (ServerInfo, error) {
 	return DefaultClient.Ping()
 }
 
-// Querier returns a struct that can be used to save query options and execute queries.
+// DefaultQuerier returns a struct that can be used to save query options and execute queries.
 func DefaultQuerier() *Querier {
 	return DefaultClient.Querier()
 }

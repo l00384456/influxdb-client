@@ -3,7 +3,6 @@ package influxdb
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,7 +13,6 @@ type WriteOptions struct {
 	Database        string
 	RetentionPolicy string
 	Consistency     Consistency
-	Precision       Precision
 	Protocol        Protocol
 }
 
@@ -23,8 +21,48 @@ func (opt *WriteOptions) Clone() WriteOptions {
 	return *opt
 }
 
-// Writer holds onto write options and acts as a convenience method for performing writes.
-type Writer struct {
+// Writer is an interface for something that can write points to somewhere.
+// The Writer wraps io.Writer and also exposes the Protocol that points should
+// be encoded with when writing to this Writer.
+type Writer interface {
+	io.Writer
+	Protocol() Protocol
+}
+
+// WritePoints encodes and writes the points to the passed in Writer using
+// either the Protocol returned by the Writer or the default line protocol if
+// writing to an io.Writer.
+//
+// After writing all of the points, the Flush method is called on the io.Writer
+// if it supports that method.
+func WritePoints(w io.Writer, points []Point) (n int, err error) {
+	if len(points) == 0 {
+		return 0, nil
+	}
+
+	for _, pt := range points {
+		c, err := pt.WriteTo(w)
+		if err != nil {
+			return n, err
+		}
+		n += c
+	}
+
+	type flusher interface {
+		Flush() error
+	}
+	if w, ok := w.(flusher); ok {
+		if err := w.Flush(); err != nil {
+			return n, err
+		}
+	}
+	return
+}
+
+var _ Writer = &HTTPWriter{}
+
+// HTTPWriter holds onto write options and acts as a convenience method for performing writes.
+type HTTPWriter struct {
 	c *Client
 	WriteOptions
 }
@@ -33,7 +71,7 @@ type Writer struct {
 // protocol format specified in the WriteOptions attached to this writer so the
 // server understands the format. Each call to Write will make a single HTTP
 // write request.
-func (w *Writer) Write(data []byte) (n int, err error) {
+func (w *HTTPWriter) Write(data []byte) (n int, err error) {
 	if len(data) == 0 {
 		return 0, nil
 	}
@@ -48,8 +86,8 @@ func (w *Writer) Write(data []byte) (n int, err error) {
 	if consistency := w.Consistency.String(); consistency != "" {
 		values.Set("consistency", consistency)
 	}
-	if precision := w.Precision.String(); precision != "" {
-		values.Set("precision", precision)
+	if precision := GetPrecision(w.Protocol()); precision != "" {
+		values.Set("precision", precision.String())
 	}
 
 	u := w.c.url("/write")
@@ -60,7 +98,7 @@ func (w *Writer) Write(data []byte) (n int, err error) {
 		return 0, err
 	}
 
-	p := w.Protocol
+	p := w.Protocol()
 	if p == nil {
 		p = DefaultWriteProtocol
 	}
@@ -94,48 +132,7 @@ func (w *Writer) Write(data []byte) (n int, err error) {
 	}
 }
 
-// ReadFrom will read data from another io.Reader. This is used so io.Copy can
-// be supported. In the future, this function may become protocol aware. For
-// now, it reads the entire output into a buffer and writes from that buffer.
-func (w *Writer) ReadFrom(r io.Reader) (n int, err error) {
-	data, err := ioutil.ReadAll(r)
-	if err != nil {
-		return 0, err
-	}
-	return w.Write(data)
-}
-
-// WritePoint will encode a single point in the protocol format and write it to
-// the server. While useful for writing a single point, this method is very
-// inefficient when writing many points.
-func (w *Writer) WritePoint(pt Point) (n int, err error) {
-	p := w.Protocol
-	if p == nil {
-		p = DefaultWriteProtocol
-	}
-	opts := EncodeOptions{Precision: w.Precision}
-
-	var buf bytes.Buffer
-	if err := p.Encode(&buf, &pt, opts); err != nil {
-		return 0, err
-	}
-	return w.Write(buf.Bytes())
-}
-
-// WriteBatch will encode a batch of points in the protocol format and write it
-// to the server. It makes no attempt to split the number of points in the batch.
-func (w *Writer) WriteBatch(pts []Point) (n int, err error) {
-	p := w.Protocol
-	if p == nil {
-		p = DefaultWriteProtocol
-	}
-	opts := EncodeOptions{Precision: w.Precision}
-
-	var buf bytes.Buffer
-	for _, pt := range pts {
-		if err := p.Encode(&buf, &pt, opts); err != nil {
-			return 0, err
-		}
-	}
-	return w.Write(buf.Bytes())
+// Protocol is the Protocol that will be used to write to the HTTP endpoint.
+func (w *HTTPWriter) Protocol() Protocol {
+	return w.WriteOptions.Protocol
 }
