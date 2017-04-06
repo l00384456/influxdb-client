@@ -12,7 +12,7 @@ import (
 
 func TestQuerier_Select_Param(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.Method, "GET"; got != want {
+		if got, want := r.Method, "POST"; got != want {
 			t.Errorf("Method = %q; want %q", got, want)
 		}
 
@@ -91,7 +91,7 @@ func TestQuerier_Select_Param(t *testing.T) {
 
 func TestQuerier_Select_Params(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.Method, "GET"; got != want {
+		if got, want := r.Method, "POST"; got != want {
 			t.Errorf("Method = %q; want %q", got, want)
 		}
 
