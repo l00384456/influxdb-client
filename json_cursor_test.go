@@ -48,13 +48,13 @@ func TestCursor_JSON_Basic(t *testing.T) {
 
 	if got, err := series.NextRow(); err != nil {
 		t.Fatalf("unexpected err: %v", err)
-	} else if want := []interface{}{"2010-01-01T00:00:00Z", float64(2)}; !reflect.DeepEqual(got.Values(), want) {
+	} else if want := []interface{}{"2010-01-01T00:00:00Z", int64(2)}; !reflect.DeepEqual(got.Values(), want) {
 		t.Fatalf("got %#v; want %#v", got.Values(), want)
 	}
 
 	if got, err := series.NextRow(); err != nil {
 		t.Fatalf("unexpected err: %v", err)
-	} else if want := []interface{}{"2010-01-01T00:00:10Z", float64(3)}; !reflect.DeepEqual(got.Values(), want) {
+	} else if want := []interface{}{"2010-01-01T00:00:10Z", int64(3)}; !reflect.DeepEqual(got.Values(), want) {
 		t.Fatalf("got %#v; want %#v", got.Values(), want)
 	}
 
@@ -99,7 +99,7 @@ func TestCursor_JSON_ResultError(t *testing.T) {
 
 	if got, err := series.NextRow(); err != nil {
 		t.Fatalf("unexpected err: %v", err)
-	} else if want := []interface{}{"2010-01-01T00:00:00Z", float64(2)}; !reflect.DeepEqual(got.Values(), want) {
+	} else if want := []interface{}{"2010-01-01T00:00:00Z", int64(2)}; !reflect.DeepEqual(got.Values(), want) {
 		t.Fatalf("got %#v; want %#v", got.Values(), want)
 	}
 
@@ -164,11 +164,11 @@ func TestCursor_JSON_Row(t *testing.T) {
 		t.Fatalf("got %#v; want %#v", got, want)
 	}
 
-	if got, want := row.ValueByName("value"), float64(2); got != want {
+	if got, want := row.ValueByName("value"), int64(2); got != want {
 		t.Fatalf("got %#v; want %#v", got, want)
 	}
 
-	if got, want := row.Value(1), float64(2); got != want {
+	if got, want := row.Value(1), int64(2); got != want {
 		t.Fatalf("got %#v; want %#v", got, want)
 	}
 }

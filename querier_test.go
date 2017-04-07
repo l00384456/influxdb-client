@@ -72,7 +72,7 @@ func TestQuerier_Select_Param(t *testing.T) {
 	})
 
 	exp := [][]interface{}{
-		[]interface{}{"1970-01-01T00:00:00Z", float64(5)},
+		[]interface{}{"1970-01-01T00:00:00Z", int64(5)},
 	}
 	if !reflect.DeepEqual(got, exp) {
 		t.Fatalf("Values = %q; want %q", got, exp)
@@ -154,7 +154,7 @@ func TestQuerier_Select_Params(t *testing.T) {
 	})
 
 	exp := [][]interface{}{
-		[]interface{}{"1970-01-01T00:00:00Z", float64(5)},
+		[]interface{}{"1970-01-01T00:00:00Z", int64(5)},
 	}
 	if !reflect.DeepEqual(got, exp) {
 		t.Fatalf("Values = %q; want %q", got, exp)
