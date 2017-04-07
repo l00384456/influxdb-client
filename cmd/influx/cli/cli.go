@@ -3,6 +3,8 @@ package cli // import "github.com/influxdata/influxdb-client/cmd/influx/cli"
 
 import (
 	"fmt"
+	"io"
+	"os"
 
 	influxdb "github.com/influxdata/influxdb-client"
 	"github.com/peterh/liner"
@@ -31,5 +33,27 @@ func (c *CommandLine) Run() error {
 		addr = influxdb.DefaultAddr
 	}
 	fmt.Printf("Connected to %s version %s\n", addr, serverInfo.Version)
+
+	c.Line = liner.NewLiner()
+	defer c.Line.Close()
+
+	c.Line.SetMultiLineMode(true)
+
+	for {
+		l, e := c.Line.Prompt("> ")
+		if e == io.EOF {
+			return nil
+		} else if e != nil {
+			return e
+		}
+
+		r, _, err := c.Client.Raw(l)
+		if err != nil {
+			fmt.Printf("ERR: %s\n", err)
+			continue
+		}
+		io.Copy(os.Stdout, r)
+		r.Close()
+	}
 	return nil
 }
