@@ -57,7 +57,7 @@ func (q *Querier) Raw(query interface{}, opts ...QueryOption) (io.ReadCloser, st
 
 // Select executes a query returns a Cursor that will parse the results from
 // the stream. Use Execute for any queries that modify the database.
-func (q *Querier) Select(query interface{}, opts ...QueryOption) (Cursor, error) {
+func (q *Querier) Select(query interface{}, opts ...QueryOption) (*Cursor, error) {
 	querier := *q
 	querier.Format = "json"
 	r, format, err := querier.Raw(query, opts...)
@@ -73,5 +73,5 @@ func (q *Querier) Execute(query interface{}, opts ...QueryOption) error {
 	if err != nil {
 		return err
 	}
-	return EachResult(cur, func(ResultSet) error { return nil })
+	return cur.Each(func(*ResultSet) error { return nil })
 }

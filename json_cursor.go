@@ -25,7 +25,7 @@ func newJSONCursor(r io.ReadCloser) *jsonCursor {
 	return &jsonCursor{r: r, dec: dec}
 }
 
-func (c *jsonCursor) NextSet() (ResultSet, error) {
+func (c *jsonCursor) NextSet() (*ResultSet, error) {
 	if c.cur != nil {
 		// Mark the current result in a way so that, if it is read in the
 		// future, it will not try to modify the cursor. It is now considered
@@ -80,7 +80,7 @@ func (c *jsonCursor) NextSet() (ResultSet, error) {
 	if len(c.cur.Series) > 0 {
 		c.cur.columns = c.cur.Series[0].Columns
 	}
-	return c.cur, nil
+	return &ResultSet{result: c.cur}, nil
 }
 
 func (c *jsonCursor) Close() error {
@@ -155,7 +155,7 @@ func (r *jsonResult) Messages() []*Message {
 	return r.MessageList
 }
 
-func (r *jsonResult) NextSeries() (Series, error) {
+func (r *jsonResult) NextSeries() (*Series, error) {
 	// If we have a current series, mark it as invalid. If that series was
 	// partial, we need to advance this ResultSet so it skips past the next
 	// series. The most difficult part of this is that if a series is partial,
@@ -275,7 +275,7 @@ func (r *jsonResult) NextSeries() (Series, error) {
 		values:  v.Values,
 		partial: v.Partial,
 	}
-	return r.series, nil
+	return &Series{s: r.series}, nil
 }
 
 type jsonSeries struct {

@@ -83,17 +83,17 @@ func (c *CommandLine) exec(querier *influxdb.Querier, l string) {
 	}
 }
 
-func (c *CommandLine) writeColumns(cur influxdb.Cursor, signalCh <-chan os.Signal) {
+func (c *CommandLine) writeColumns(cur *influxdb.Cursor, signalCh <-chan os.Signal) {
 	writer := new(tabwriter.Writer)
 	writer.Init(os.Stdout, 0, 8, 1, ' ', 0)
 
-	influxdb.EachResult(cur, func(r influxdb.ResultSet) error {
+	cur.Each(func(r *influxdb.ResultSet) error {
 		select {
 		case <-signalCh:
 			return influxdb.ErrStop
 		default:
 		}
-		return influxdb.EachSeries(r, func(series influxdb.Series) error {
+		return r.Each(func(series *influxdb.Series) error {
 			fmt.Fprintf(writer, "name: %s\n", series.Name())
 			if tags := series.Tags(); len(tags) > 0 {
 				fmt.Fprintf(writer, "tags: %s\n", tags)
@@ -115,7 +115,7 @@ func (c *CommandLine) writeColumns(cur influxdb.Cursor, signalCh <-chan os.Signa
 			default:
 			}
 			defer writer.Flush()
-			return influxdb.EachRow(series, func(row influxdb.Row) error {
+			return series.Each(func(row influxdb.Row) error {
 				select {
 				case <-signalCh:
 					return influxdb.ErrStop
