@@ -87,12 +87,17 @@ func (c *CommandLine) writeColumns(cur *influxdb.Cursor, signalCh <-chan os.Sign
 	writer := new(tabwriter.Writer)
 	writer.Init(os.Stdout, 0, 8, 1, ' ', 0)
 
-	cur.Each(func(r *influxdb.ResultSet) error {
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
 		select {
 		case <-signalCh:
-			return influxdb.ErrStop
-		default:
+			cur.Close()
+		case <-done:
 		}
+	}()
+
+	cur.Each(func(r *influxdb.ResultSet) error {
 		return r.Each(func(series *influxdb.Series) error {
 			fmt.Fprintf(writer, "name: %s\n", series.Name())
 			if tags := series.Tags(); len(tags) > 0 {
@@ -108,27 +113,16 @@ func (c *CommandLine) writeColumns(cur *influxdb.Cursor, signalCh <-chan os.Sign
 				fmt.Fprint(writer, strings.Repeat("-", len(col)))
 			}
 			fmt.Fprintln(writer)
-
-			select {
-			case <-signalCh:
-				return influxdb.ErrStop
-			default:
-			}
 			defer writer.Flush()
-			return series.Each(func(row influxdb.Row) error {
-				select {
-				case <-signalCh:
-					return influxdb.ErrStop
-				default:
-				}
 
+			return series.Each(func(row influxdb.Row) error {
 				values := row.Values()
 				for i, val := range values {
 					if i > 0 {
 						fmt.Fprint(writer, "\t")
 					}
 					switch v := val.(type) {
-					case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
+					case int64:
 						fmt.Fprintf(writer, "%d", v)
 					default:
 						fmt.Fprintf(writer, "%v", v)

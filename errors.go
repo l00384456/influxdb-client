@@ -9,8 +9,11 @@ import (
 )
 
 var (
-	// ErrStop can be returned by the EachXXX methods to cause them to return early with no error.
+	// ErrStop can be returned by the Each methods to cause them to return early with no error.
 	ErrStop = errors.New("stop")
+
+	// ErrInterrupted is returned by the Each methods when the context is canceled.
+	ErrInterrupted = errors.New("interrupted")
 
 	// ErrNoFields is returned when attempting to write with no fields.
 	ErrNoFields = errors.New("no fields")
