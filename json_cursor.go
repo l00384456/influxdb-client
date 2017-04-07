@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -19,10 +20,9 @@ type jsonCursor struct {
 }
 
 func newJSONCursor(r io.ReadCloser) *jsonCursor {
-	return &jsonCursor{
-		r:   r,
-		dec: json.NewDecoder(r),
-	}
+	dec := json.NewDecoder(r)
+	dec.UseNumber()
+	return &jsonCursor{r: r, dec: dec}
 }
 
 func (c *jsonCursor) NextSet() (ResultSet, error) {
@@ -89,10 +89,6 @@ func (c *jsonCursor) Close() error {
 	}
 	c.buf.Results = nil
 	return nil
-}
-
-func (c *jsonCursor) Hijack() (io.ReadCloser, error) {
-	return c.r, nil
 }
 
 type jsonResult struct {
@@ -356,9 +352,18 @@ func (s *jsonSeries) NextRow() (Row, error) {
 		s.partial = v.Partial
 	}
 
-	v := s.values[0]
+	values := s.values[0]
+	for i, v := range values {
+		if v, ok := v.(json.Number); ok {
+			if strings.Contains(string(v), ".") {
+				values[i], _ = v.Float64()
+			} else {
+				values[i], _ = v.Int64()
+			}
+		}
+	}
 	s.values = s.values[1:]
-	return jsonRow{values: v, result: s.r}, nil
+	return jsonRow{values: values, result: s.r}, nil
 }
 
 type jsonRow struct {
@@ -385,8 +390,8 @@ func (r jsonRow) Time() time.Time {
 		// a time value.
 		t, _ := time.Parse(time.RFC3339Nano, v)
 		return t
-	case float64:
-		return time.Unix(0, int64(v)).UTC()
+	case int64:
+		return time.Unix(0, v).UTC()
 	}
 	return time.Time{}
 }
