@@ -1,4 +1,4 @@
-package influxdb
+package influxdb // import "github.com/influxdata/influxdb-client"
 
 // DefaultClient is the default InfluxDB client.
 var DefaultClient = &Client{}
