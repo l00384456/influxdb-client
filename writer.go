@@ -3,7 +3,6 @@ package influxdb
 import (
 	"bytes"
 	"io"
-	"net/http"
 	"net/url"
 	"strings"
 )
@@ -93,11 +92,7 @@ func (w *HTTPWriter) Write(data []byte) (n int, err error) {
 	u := w.c.url("/write")
 	u.RawQuery = values.Encode()
 
-	req, err := http.NewRequest("POST", u.String(), bytes.NewReader(data))
-	if err != nil {
-		return 0, err
-	}
-
+	req := newRequest("POST", u.String(), bytes.NewReader(data))
 	p := w.Protocol()
 	if p == nil {
 		p = DefaultWriteProtocol

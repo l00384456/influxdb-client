@@ -83,11 +83,7 @@ type ServerInfo struct {
 // HTTP requests.
 func (c *Client) Ping() (ServerInfo, error) {
 	u := c.url("/ping")
-	req, err := http.NewRequest("GET", u.String(), nil)
-	if err != nil {
-		return ServerInfo{}, ErrPing{Cause: err}
-	}
-
+	req := newRequest("GET", u.String(), nil)
 	resp, err := c.Client.Do(req)
 	if err != nil {
 		return ServerInfo{}, ErrPing{Cause: err}
@@ -211,11 +207,7 @@ func (c *Client) newQueryRequest(q interface{}, readonly bool, opt QueryOptions)
 	u := c.url("/query")
 	u.RawQuery = values.Encode()
 
-	req, err := http.NewRequest(method, u.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
+	req := newRequest(method, u.String(), body)
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
@@ -273,4 +265,11 @@ func (c *Client) url(path string) url.URL {
 		u.Host = DefaultAddr
 	}
 	return u
+}
+
+// newRequest constructs a new request and sets the default headers.
+func newRequest(method, url string, body io.Reader) *http.Request {
+	req, _ := http.NewRequest(method, url, body)
+	req.Header.Set("User-Agent", "InfluxDB Go Client")
+	return req
 }
