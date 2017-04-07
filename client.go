@@ -237,7 +237,7 @@ func (c *Client) Raw(q interface{}, opts ...QueryOption) (io.ReadCloser, string,
 
 // Select executes a query and parses the results from the stream.
 // To specify options, use Querier to create a Querier and set the options on that.
-func (c *Client) Select(q interface{}, opts ...QueryOption) (Cursor, error) {
+func (c *Client) Select(q interface{}, opts ...QueryOption) (*Cursor, error) {
 	querier := Querier{c: c}
 	return querier.Select(q, opts...)
 }

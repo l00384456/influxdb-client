@@ -28,7 +28,7 @@ func newMessagePackCursor(r io.ReadCloser) (*msgpackCursor, error) {
 	return &msgpackCursor{r: r, dec: dec}, nil
 }
 
-func (c *msgpackCursor) NextSet() (ResultSet, error) {
+func (c *msgpackCursor) NextSet() (*ResultSet, error) {
 	if c.cur != nil {
 		if err := c.cur.Discard(); err != nil {
 			return nil, err
@@ -52,7 +52,7 @@ func (c *msgpackCursor) NextSet() (ResultSet, error) {
 		return nil, err
 	}
 	c.cur = result
-	return result, nil
+	return &ResultSet{result: result}, nil
 }
 
 func (c *msgpackCursor) Close() error {
@@ -102,7 +102,7 @@ func (r *msgpackResult) readChunkHeader() error {
 	return nil
 }
 
-func (r *msgpackResult) NextSeries() (Series, error) {
+func (r *msgpackResult) NextSeries() (*Series, error) {
 	if r.dec == nil {
 		return nil, io.EOF
 	}
@@ -144,7 +144,7 @@ func (r *msgpackResult) NextSeries() (Series, error) {
 		return nil, err
 	}
 	r.series = series
-	return series, nil
+	return &Series{s: series}, nil
 }
 
 func (r *msgpackResult) Discard() error {

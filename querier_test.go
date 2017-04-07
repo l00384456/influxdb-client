@@ -66,7 +66,7 @@ func TestQuerier_Select_Param(t *testing.T) {
 
 	n, _ := series.Len()
 	got := make([][]interface{}, 0, n)
-	influxdb.EachRow(series, func(row influxdb.Row) error {
+	series.Each(func(row influxdb.Row) error {
 		got = append(got, row.Values())
 		return nil
 	})
@@ -148,7 +148,7 @@ func TestQuerier_Select_Params(t *testing.T) {
 
 	n, _ := series.Len()
 	got := make([][]interface{}, 0, n)
-	influxdb.EachRow(series, func(row influxdb.Row) error {
+	series.Each(func(row influxdb.Row) error {
 		got = append(got, row.Values())
 		return nil
 	})
