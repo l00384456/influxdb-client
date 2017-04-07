@@ -226,6 +226,13 @@ func (c *Client) newQueryRequest(q interface{}, readonly bool, opt QueryOptions)
 	return req, nil
 }
 
+// Raw executes a query and returns the raw result.
+// To specify options, use Querier to create a Querier and set the options on that.
+func (c *Client) Raw(q interface{}, opts ...QueryOption) (io.ReadCloser, string, error) {
+	querier := Querier{c: c}
+	return querier.Raw(q, opts...)
+}
+
 // Select executes a query and parses the results from the stream.
 // To specify options, use Querier to create a Querier and set the options on that.
 func (c *Client) Select(q interface{}, opts ...QueryOption) (Cursor, error) {
