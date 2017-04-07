@@ -16,6 +16,14 @@ import (
 	"strings"
 )
 
+const (
+	// DefaultProto is the default protocol that will be used when connecting.
+	DefaultProto = "http"
+
+	// DefaultAddr is the default address that will be used when connecting.
+	DefaultAddr = "127.0.0.1:8086"
+)
+
 // Auth contains the authentication credentials. This only handles user
 // authentication within InfluxDB and doesn't handle any advanced
 // authentication methods.
@@ -259,10 +267,10 @@ func (c *Client) url(path string) url.URL {
 	}
 
 	if u.Scheme == "" {
-		u.Scheme = "http"
+		u.Scheme = DefaultProto
 	}
 	if u.Host == "" {
-		u.Host = "127.0.0.1:8086"
+		u.Host = DefaultAddr
 	}
 	return u
 }
