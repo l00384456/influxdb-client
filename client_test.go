@@ -431,7 +431,7 @@ func TestClient_Select(t *testing.T) {
 
 	n, _ := series.Len()
 	got := make([][]interface{}, 0, n)
-	influxdb.EachRow(series, func(row influxdb.Row) error {
+	series.Each(func(row influxdb.Row) error {
 		got = append(got, row.Values())
 		return nil
 	})

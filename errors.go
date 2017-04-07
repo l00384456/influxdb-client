@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	// ErrStop can be returned by the EachXXX methods to cause them to return early with no error.
+	// ErrStop can be returned by the Each methods to cause them to return early with no error.
 	ErrStop = errors.New("stop")
 
 	// ErrNoFields is returned when attempting to write with no fields.
