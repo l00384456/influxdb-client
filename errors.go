@@ -20,6 +20,7 @@ var (
 	ErrSeriesTruncated = errors.New("truncated output")
 )
 
+// ErrPing wraps the error returned when attempting to ping the server and it fails.
 type ErrPing struct {
 	Cause error
 }
@@ -28,6 +29,7 @@ func (e ErrPing) Error() string {
 	return fmt.Sprintf("ping failed: %s", e.Cause)
 }
 
+// ErrUnknownFormat is returned whenever an unknown cursor format is used.
 type ErrUnknownFormat struct {
 	Format string
 }
@@ -36,6 +38,7 @@ func (e ErrUnknownFormat) Error() string {
 	return fmt.Sprintf("unknown format: %s", e.Format)
 }
 
+// ErrResult wraps an error returned for a statement in a query.
 type ErrResult struct {
 	Err string
 }
@@ -44,6 +47,7 @@ func (e ErrResult) Error() string {
 	return e.Err
 }
 
+// ErrPartialWrite is returned whenever a partial write is detected.
 type ErrPartialWrite struct {
 	Err string
 }

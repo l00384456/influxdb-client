@@ -27,3 +27,14 @@ func TestTags_Sort(t *testing.T) {
 		t.Errorf("have %q, want %q", tags[0].Value, "useast")
 	}
 }
+
+func TestTags_String(t *testing.T) {
+	tags := influxdb.Tags([]influxdb.Tag{
+		{Key: "host", Value: "server01"},
+		{Key: "region", Value: "useast"},
+	})
+
+	if have, want := tags.String(), "host=server01,region=useast"; have != want {
+		t.Errorf("unexpected tags string: have=%#v want=%#v", have, want)
+	}
+}

@@ -14,6 +14,7 @@ type jsonCursor struct {
 	cur *jsonResult
 	buf struct {
 		Results []*jsonResult `json:"results"`
+		Error   string        `json:"error"`
 	}
 }
 
@@ -56,15 +57,17 @@ func (c *jsonCursor) NextSet() (ResultSet, error) {
 	for len(c.buf.Results) == 0 {
 		if err := c.dec.Decode(&c.buf); err != nil {
 			return nil, err
+		} else if c.buf.Error != "" {
+			return nil, ErrResult{Err: c.buf.Error}
 		}
 	}
 
 	// Keep track of the currently active ResultSet so we can later invalidate
 	// it if we need to.
 	c.cur = c.buf.Results[0]
-	if c.cur.Err != "" {
+	if c.cur.Error != "" {
 		// Return an error instead of the ResultSet if the result contained an error.
-		return nil, ErrResult{Err: c.cur.Err}
+		return nil, ErrResult{Err: c.cur.Error}
 	}
 
 	c.buf.Results = c.buf.Results[1:]
@@ -102,7 +105,7 @@ type jsonResult struct {
 	} `json:"series"`
 	MessageList []*Message `json:"messages"`
 	Partial     bool       `json:"partial"`
-	Err         string     `json:"error"`
+	Error       string     `json:"error"`
 
 	index         int
 	columns       []string
@@ -193,8 +196,8 @@ func (r *jsonResult) NextSeries() (Series, error) {
 					// result. We must use the same result struct so that we
 					// keep all references.
 					result := r.cur.buf.Results[0]
-					if result.Err != "" {
-						return nil, ErrResult{Err: result.Err}
+					if result.Error != "" {
+						return nil, ErrResult{Err: result.Error}
 					}
 					r.cur.buf.Results = r.cur.buf.Results[1:]
 					r.Series = result.Series
@@ -245,8 +248,8 @@ func (r *jsonResult) NextSeries() (Series, error) {
 		// result. We must use the same result struct so that we
 		// keep all references.
 		result := r.cur.buf.Results[0]
-		if result.Err != "" {
-			return nil, ErrResult{Err: result.Err}
+		if result.Error != "" {
+			return nil, ErrResult{Err: result.Error}
 		}
 		r.cur.buf.Results = r.cur.buf.Results[1:]
 		r.Series = result.Series
@@ -336,8 +339,8 @@ func (s *jsonSeries) NextRow() (Row, error) {
 			// result. We must use the same result struct so that we
 			// keep all references.
 			result := s.r.cur.buf.Results[0]
-			if result.Err != "" {
-				return nil, ErrResult{Err: result.Err}
+			if result.Error != "" {
+				return nil, ErrResult{Err: result.Error}
 			}
 			s.r.cur.buf.Results = s.r.cur.buf.Results[1:]
 			s.r.Series = result.Series
