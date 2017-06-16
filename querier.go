@@ -62,7 +62,12 @@ func (q *Querier) Select(query interface{}, opts ...QueryOption) (*Cursor, error
 	if err != nil {
 		return nil, err
 	}
-	return NewCursor(r, format)
+	cur, err := NewCursor(r, format)
+	if err != nil {
+		r.Close()
+		return nil, err
+	}
+	return cur, nil
 }
 
 // Execute executes a query and returns if any error occurred. It discards the result.
