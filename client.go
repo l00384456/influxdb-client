@@ -220,8 +220,10 @@ func (c *Client) newQueryRequest(q interface{}, readonly bool, opt QueryOptions)
 		req.Header.Set("Accept", "text/csv")
 	case "application/json", "json", "":
 		req.Header.Set("Accept", "application/json")
+	case "application/x-msgpack", "msgpack":
+		req.Header.Set("Accept", "application/x-msgpack")
 	default:
-		return nil, fmt.Errorf("unknown format: %s", opt.Format)
+		return nil, ErrUnknownFormat{Format: opt.Format}
 	}
 	return req, nil
 }

@@ -58,7 +58,9 @@ func (q *Querier) Raw(query interface{}, opts ...QueryOption) (io.ReadCloser, st
 // Select executes a query returns a Cursor that will parse the results from
 // the stream. Use Execute for any queries that modify the database.
 func (q *Querier) Select(query interface{}, opts ...QueryOption) (Cursor, error) {
-	r, format, err := q.Raw(query, opts...)
+	querier := *q
+	querier.Format = "msgpack"
+	r, format, err := querier.Raw(query, opts...)
 	if err != nil {
 		return nil, err
 	}

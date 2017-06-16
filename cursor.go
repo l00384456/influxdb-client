@@ -20,13 +20,6 @@ type Cursor interface {
 
 // ResultSet encapsulates a result from a single command.
 type ResultSet interface {
-	// Columns returns the column names for this ResultSet.
-	Columns() []string
-
-	// Index returns the array index for the column name. If a column with that
-	// name does not exist, this returns -1.
-	Index(name string) int
-
 	// Messages returns the informational messages sent by the server for this ResultSet.
 	Messages() []*Message
 
@@ -78,6 +71,8 @@ func NewCursor(r io.ReadCloser, format string) (Cursor, error) {
 	switch format {
 	case "json", "application/json":
 		return newJSONCursor(r), nil
+	case "msgpack", "application/x-msgpack":
+		return newMessagePackCursor(r)
 	default:
 		return nil, ErrUnknownFormat{Format: format}
 	}
