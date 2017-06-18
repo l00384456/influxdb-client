@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	influxdb "github.com/influxdata/influxdb-client"
 )
@@ -392,10 +393,21 @@ func TestClient_Select(t *testing.T) {
 			t.Errorf("q = %q; want %q", got, want)
 		}
 
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Add("Content-Type", "application/x-msgpack")
 		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, `{"results":[{"series":[{"name":"cpu","columns":["time","mean"],"values":[["1970-01-01T00:00:00Z",5]]}]}]}`)
-		w.Write([]byte("\n"))
+		EncodeAsMessagePack(w,
+			map[string]interface{}{"results": 1},
+			map[string]interface{}{"id": 0},
+			[]interface{}{1, false},
+			map[string]interface{}{
+				"name":    "cpu",
+				"columns": []string{"time", "mean"},
+			},
+			[]interface{}{1, false},
+			map[string]interface{}{
+				"values": []interface{}{time.Unix(0, 0), 5.0},
+			},
+		)
 	}))
 	defer server.Close()
 
@@ -437,7 +449,7 @@ func TestClient_Select(t *testing.T) {
 	})
 
 	exp := [][]interface{}{
-		[]interface{}{"1970-01-01T00:00:00Z", float64(5)},
+		[]interface{}{time.Unix(0, 0), float64(5)},
 	}
 	if !reflect.DeepEqual(got, exp) {
 		t.Fatalf("Values = %q; want %q", got, exp)
@@ -465,10 +477,13 @@ func TestClient_Execute_Success(t *testing.T) {
 			t.Errorf("q = %q; want %q", got, want)
 		}
 
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Add("Content-Type", "application/x-msgpack")
 		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, `{"results":[{}]}`)
-		w.Write([]byte("\n"))
+		EncodeAsMessagePack(w,
+			map[string]interface{}{"results": 1},
+			map[string]interface{}{"id": 0},
+			[]interface{}{0, false},
+		)
 	}))
 	defer server.Close()
 
@@ -493,10 +508,12 @@ func TestClient_Execute_Failure(t *testing.T) {
 			t.Errorf("q = %q; want %q", got, want)
 		}
 
-		w.Header().Add("Content-Type", "application/json")
+		w.Header().Add("Content-Type", "application/x-msgpack")
 		w.WriteHeader(http.StatusOK)
-		io.WriteString(w, `{"results":[{"error":"expected err"}]}`)
-		w.Write([]byte("\n"))
+		EncodeAsMessagePack(w,
+			map[string]interface{}{"results": 1},
+			map[string]interface{}{"id": 0, "error": "expected err"},
+		)
 	}))
 	defer server.Close()
 

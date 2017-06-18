@@ -150,11 +150,9 @@ type Row interface {
 
 // NewCursor constructs a new cursor from the io.ReadCloser and parses it with
 // the appropriate decoder for the format. The following formatters are supported:
-// json (application/json)
+// msgpack (application/x-msgpack)
 func NewCursor(r io.ReadCloser, format string) (*Cursor, error) {
 	switch format {
-	case "json", "application/json":
-		return &Cursor{cur: newJSONCursor(r)}, nil
 	case "msgpack", "application/x-msgpack":
 		cur, err := newMessagePackCursor(r)
 		if err != nil {

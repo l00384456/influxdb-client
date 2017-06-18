@@ -42,7 +42,7 @@ func (c *msgpackCursor) NextSet() (*ResultSet, error) {
 	}
 
 	if header.Error != nil {
-		return nil, errors.New(*header.Error)
+		return nil, ErrResult{Err: *header.Error}
 	}
 	result := &msgpackResult{
 		ID:  header.ID,
@@ -130,7 +130,7 @@ func (r *msgpackResult) NextSeries() (*Series, error) {
 	r.remaining--
 
 	if header.Error != nil {
-		return nil, errors.New(*header.Error)
+		return nil, ErrResult{Err: *header.Error}
 	}
 
 	series := &msgpackSeries{
@@ -235,7 +235,7 @@ func (s *msgpackSeries) NextRow() (Row, error) {
 	s.remaining--
 
 	if row.Error != nil {
-		return nil, errors.New(*row.Error)
+		return nil, ErrResult{Err: *row.Error}
 	}
 
 	// If the number of remaining rows is zero and the series is not done, read
