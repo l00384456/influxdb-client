@@ -75,6 +75,57 @@ func TestCursor_ResponseError(t *testing.T) {
 	if err == nil {
 		t.Error("expected error")
 	} else if have, want := err.Error(), "no database found"; have != want {
-		t.Errorf("unexpected error: have=%v want=%v", have, want)
+		t.Errorf("unexpected error message %q; want %q", have, want)
+	}
+}
+
+func TestCursor_ResultError(t *testing.T) {
+	var buf bytes.Buffer
+	EncodeAsMessagePack(&buf,
+		map[string]interface{}{"results": 1},
+		map[string]interface{}{"id": 0, "error": "expected err"},
+	)
+
+	cur, err := influxdb.NewCursor(ioutil.NopCloser(&buf), "msgpack")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	_, err = cur.NextSet()
+	if err == nil {
+		t.Error("expected error")
+	} else if e, ok := err.(influxdb.ErrResult); !ok {
+		t.Errorf("got error type %T; want %T", err, e)
+	} else if e.Err != "expected err" {
+		t.Errorf("unexpected error message %q; want %q", e.Err, "expected err")
+	}
+}
+
+func TestCursor_SeriesError(t *testing.T) {
+	var buf bytes.Buffer
+	EncodeAsMessagePack(&buf,
+		map[string]interface{}{"results": 1},
+		map[string]interface{}{"id": 0},
+		[]interface{}{1, false},
+		map[string]string{"error": "expected err"},
+	)
+
+	cur, err := influxdb.NewCursor(ioutil.NopCloser(&buf), "msgpack")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	result, err := cur.NextSet()
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	_, err = result.NextSeries()
+	if err == nil {
+		t.Error("expected error")
+	} else if e, ok := err.(influxdb.ErrResult); !ok {
+		t.Errorf("got error type %T; want %T", err, e)
+	} else if e.Err != "expected err" {
+		t.Errorf("unexpected error message %q; want %q", e.Err, "expected err")
 	}
 }
