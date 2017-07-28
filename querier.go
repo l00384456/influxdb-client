@@ -1,5 +1,7 @@
 package influxdb
 
+import "io"
+
 // QueryOptions is a set of configuration options for configuring queries.
 type QueryOptions struct {
 	Database  string
@@ -27,34 +29,9 @@ type Querier struct {
 	QueryOptions
 }
 
-// Select executes a query with GET and returns a Cursor that will parse the
-// results from the stream. Use Execute for any queries that modify the database.
-func (q *Querier) Select(query interface{}, opts ...QueryOption) (Cursor, error) {
-	opt := q.QueryOptions
-	if len(opts) > 0 {
-		opt = opt.Clone()
-		for _, f := range opts {
-			f.apply(&opt)
-		}
-	}
-
-	req, err := q.c.NewReadonlyQueryRequest(query, opt)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := q.c.Client.Do(req)
-	if err != nil {
-		return nil, err
-	} else if resp.StatusCode/100 != 2 {
-		return nil, ReadError(resp)
-	}
-	format := resp.Header.Get("Content-Type")
-	return NewCursor(resp.Body, format)
-}
-
-// Execute executes a query with a POST and returns if any error occurred. It discards the result.
-func (q *Querier) Execute(query interface{}, opts ...QueryOption) error {
+// Raw executes a raw query returns the unmodified io.ReadCloser from the
+// response if a proper status code is returned.
+func (q *Querier) Raw(query interface{}, opts ...QueryOption) (io.ReadCloser, string, error) {
 	opt := q.QueryOptions
 	if len(opts) > 0 {
 		opt = opt.Clone()
@@ -65,20 +42,39 @@ func (q *Querier) Execute(query interface{}, opts ...QueryOption) error {
 
 	req, err := q.c.NewQueryRequest(query, opt)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	resp, err := q.c.Client.Do(req)
 	if err != nil {
-		return err
+		return nil, "", err
 	} else if resp.StatusCode/100 != 2 {
-		return ReadError(resp)
+		return nil, "", ReadError(resp)
 	}
-
 	format := resp.Header.Get("Content-Type")
-	cur, err := NewCursor(resp.Body, format)
+	return resp.Body, format, nil
+}
+
+// Select executes a query returns a Cursor that will parse the results from
+// the stream. Use Execute for any queries that modify the database.
+func (q *Querier) Select(query interface{}, opts ...QueryOption) (*Cursor, error) {
+	r, format, err := q.Raw(query, opts...)
+	if err != nil {
+		return nil, err
+	}
+	cur, err := NewCursor(r, format)
+	if err != nil {
+		r.Close()
+		return nil, err
+	}
+	return cur, nil
+}
+
+// Execute executes a query and returns if any error occurred. It discards the result.
+func (q *Querier) Execute(query interface{}, opts ...QueryOption) error {
+	cur, err := q.Select(query, opts...)
 	if err != nil {
 		return err
 	}
-	return EachResult(cur, func(ResultSet) error { return nil })
+	return cur.Each(func(*ResultSet) error { return nil })
 }

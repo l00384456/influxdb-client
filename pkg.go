@@ -1,4 +1,4 @@
-package influxdb
+package influxdb // import "github.com/influxdata/influxdb-client"
 
 // DefaultClient is the default InfluxDB client.
 var DefaultClient = &Client{}
@@ -16,7 +16,7 @@ func DefaultQuerier() *Querier {
 
 // Select executes a query and parses the results from the stream.
 // To specify options, use Querier to create a Querier and set the options on that.
-func Select(q interface{}, opts ...QueryOption) (Cursor, error) {
+func Select(q interface{}, opts ...QueryOption) (*Cursor, error) {
 	return DefaultClient.Select(q, opts...)
 }
 

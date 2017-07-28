@@ -16,6 +16,14 @@ import (
 	"strings"
 )
 
+const (
+	// DefaultProto is the default protocol that will be used when connecting.
+	DefaultProto = "http"
+
+	// DefaultAddr is the default address that will be used when connecting.
+	DefaultAddr = "127.0.0.1:8086"
+)
+
 // Auth contains the authentication credentials. This only handles user
 // authentication within InfluxDB and doesn't handle any advanced
 // authentication methods.
@@ -75,11 +83,7 @@ type ServerInfo struct {
 // HTTP requests.
 func (c *Client) Ping() (ServerInfo, error) {
 	u := c.url("/ping")
-	req, err := http.NewRequest("GET", u.String(), nil)
-	if err != nil {
-		return ServerInfo{}, ErrPing{Cause: err}
-	}
-
+	req := newRequest("GET", u.String(), nil)
 	resp, err := c.Client.Do(req)
 	if err != nil {
 		return ServerInfo{}, ErrPing{Cause: err}
@@ -203,11 +207,7 @@ func (c *Client) newQueryRequest(q interface{}, readonly bool, opt QueryOptions)
 	u := c.url("/query")
 	u.RawQuery = values.Encode()
 
-	req, err := http.NewRequest(method, u.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
+	req := newRequest(method, u.String(), body)
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
@@ -226,9 +226,16 @@ func (c *Client) newQueryRequest(q interface{}, readonly bool, opt QueryOptions)
 	return req, nil
 }
 
+// Raw executes a query and returns the raw result.
+// To specify options, use Querier to create a Querier and set the options on that.
+func (c *Client) Raw(q interface{}, opts ...QueryOption) (io.ReadCloser, string, error) {
+	querier := Querier{c: c}
+	return querier.Raw(q, opts...)
+}
+
 // Select executes a query and parses the results from the stream.
 // To specify options, use Querier to create a Querier and set the options on that.
-func (c *Client) Select(q interface{}, opts ...QueryOption) (Cursor, error) {
+func (c *Client) Select(q interface{}, opts ...QueryOption) (*Cursor, error) {
 	querier := Querier{c: c}
 	return querier.Select(q, opts...)
 }
@@ -259,10 +266,17 @@ func (c *Client) url(path string) url.URL {
 	}
 
 	if u.Scheme == "" {
-		u.Scheme = "http"
+		u.Scheme = DefaultProto
 	}
 	if u.Host == "" {
-		u.Host = "127.0.0.1:8086"
+		u.Host = DefaultAddr
 	}
 	return u
+}
+
+// newRequest constructs a new request and sets the default headers.
+func newRequest(method, url string, body io.Reader) *http.Request {
+	req, _ := http.NewRequest(method, url, body)
+	req.Header.Set("User-Agent", "InfluxDB Go Client")
+	return req
 }

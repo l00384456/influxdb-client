@@ -377,7 +377,7 @@ func TestClient_NewReadonlyQueryRequest_ioReader(t *testing.T) {
 
 func TestClient_Select(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got, want := r.Method, "GET"; got != want {
+		if got, want := r.Method, "POST"; got != want {
 			t.Errorf("Method = %q; want %q", got, want)
 		}
 
@@ -431,7 +431,7 @@ func TestClient_Select(t *testing.T) {
 
 	n, _ := series.Len()
 	got := make([][]interface{}, 0, n)
-	influxdb.EachRow(series, func(row influxdb.Row) error {
+	series.Each(func(row influxdb.Row) error {
 		got = append(got, row.Values())
 		return nil
 	})
